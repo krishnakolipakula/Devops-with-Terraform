@@ -1,0 +1,25 @@
+policy "no_public_ips" {
+  rule = all(aws_instance[*], !any(ip in resource.aws_instance[*].public_ip, true))
+}
+
+test "allow_no_public_ip" {
+  data = {
+    "aws_instance": [
+      {
+        "public_ip": null
+      }
+    ]
+  }
+  expected = true
+}
+
+test "deny_public_ip" {
+  data = {
+    "aws_instance": [
+      {
+        "public_ip": "192.168.1.100"
+      }
+    ]
+  }
+  expected = false
+}

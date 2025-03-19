@@ -1,0 +1,64 @@
+##################################################
+## File Structure
+##################################################
+├── main.tf  **
+├── modules/
+│   ├── network/
+│   │   ├── main.tf  **
+│   │   ├── outputs.tf
+│   │   ├── variables.tf
+│   ├── compute/
+│   │   ├── main.tf
+│   │   ├── outputs.tf
+│   │   ├── variables.tf
+│   └── storage/
+│       ├── main.tf
+│       ├── outputs.tf
+│       ├── variables.tf
+└── variables.tf
+
+
+##################################################
+## Top-level main.tf
+##################################################
+module "network" {
+  source = "./modules/network"
+  vpc_cidr = var.vpc_cidr
+}
+
+module "compute" {
+  source        = "./modules/compute"
+  instance_type = var.instance_type
+  ami_id        = var.ami_id
+  subnet_id     = module.network.subnet_id
+}
+
+module "storage" {
+  source         = "./modules/storage"
+  bucket_name    = var.bucket_name
+  enable_versioning = var.enable_versioning
+}
+
+
+##################################################
+## Module example - modules/network/main.tf
+##################################################
+resource "aws_vpc" "main" {
+  cidr_block = var.vpc_cidr
+  tags = {
+    Name = "Main VPC"
+  }
+}
+
+resource "aws_subnet" "main" {
+  vpc_id     = aws_vpc.main.id
+  cidr_block = cidrsubnet(var.vpc_cidr, 4, 1)
+  tags = {
+    Name = "Main Subnet"
+  }
+}
+
+output "subnet_id" {
+  value = aws_subnet.main.id
+}
+

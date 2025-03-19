@@ -1,0 +1,118 @@
+##################################################
+## File Structure
+##################################################
+├── main.tf  **
+├── modules/
+│   ├── vpc/
+│   │   ├── main.tf  **
+│   │   ├── outputs.tf
+│   │   ├── variables.tf
+│   ├── subnet/
+│   │   ├── main.tf  **
+│   │   ├── outputs.tf
+│   │   ├── variables.tf
+│   └── ec2/
+│       ├── main.tf  **
+│       ├── outputs.tf
+│       ├── variables.tf
+└── variables.tf  **
+
+
+##################################################
+## Top-level main.tf
+##################################################
+module "vpc" {
+  source      = "./modules/vpc"
+  cidr_block  = var.vpc_cidr
+  environment = var.environment
+}
+
+module "subnet" {
+  source      = "./modules/subnet"
+  vpc_id      = module.vpc.vpc_id
+  cidr_blocks = var.subnet_cidrs
+  environment = var.environment
+}
+
+module "ec2" {
+  source          = "./modules/ec2"
+  subnet_id       = module.subnet.subnet_ids[0]
+  instance_type   = var.instance_type
+  ami_id          = var.ami_id
+  environment     = var.environment
+}
+
+
+##################################################
+## Module example - modules/vpc/main.tf
+##################################################
+resource "aws_vpc" "main" {
+  cidr_block = var.cidr_block
+  tags = {
+    Name = "${var.environment}-vpc"
+  }
+}
+
+output "vpc_id" {
+  value = aws_vpc.main.id
+}
+
+
+##################################################
+## Module example - modules/subnet/main.tf
+##################################################
+resource "aws_subnet" "subnet" {
+  for_each = toset(var.cidr_blocks)
+  vpc_id   = var.vpc_id
+  cidr_block = each.value
+  tags = {
+    Name = "${var.environment}-subnet-${each.key}"
+  }
+}
+
+output "subnet_ids" {
+  value = values(aws_subnet.subnet.*.id)
+}
+
+
+##################################################
+## Module example - modules/ec2/main.tf
+##################################################
+resource "aws_instance" "web" {
+  ami           = var.ami_id
+  instance_type = var.instance_type
+  subnet_id     = var.subnet_id
+  tags = {
+    Name = "${var.environment}-web-instance"
+  }
+}
+
+
+##################################################
+## Top-level variables.tf
+##################################################
+variable "vpc_cidr" {
+  description = "The CIDR block for the VPC"
+  type        = string
+}
+
+variable "subnet_cidrs" {
+  description = "A list of CIDR blocks for the subnets"
+  type        = list(string)
+}
+
+variable "instance_type" {
+  description = "Instance type for the EC2 instance"
+  type        = string
+}
+
+variable "ami_id" {
+  description = "AMI ID for the EC2 instance"
+  type        = string
+}
+
+variable "environment" {
+  description = "Deployment environment (e.g., dev, prod)"
+  type        = string
+}
+

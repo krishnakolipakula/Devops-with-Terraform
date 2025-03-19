@@ -1,0 +1,77 @@
+##################################################
+## File Structure
+##################################################
+├── main.tf  **
+├── modules/
+│   └── instance/
+│       ├── main.tf  **
+│       ├── outputs.tf
+│       ├── variables.tf
+└── variables.tf  **
+
+
+##################################################
+## Top-level main.tf
+##################################################
+variable "instances" {
+  type = list(object({
+    name         = string
+    instance_type = string
+    ami_id        = string
+  }))
+}
+
+module "dynamic_instances" {
+  source = "./modules/instance"
+  for_each = { for inst in var.instances : inst.name => inst }
+  name = each.value.name
+  instance_type = each.value.instance_type
+  ami_id = each.value.ami_id
+}
+
+
+##################################################
+## Module example - modules/instance/main.tf
+##################################################
+resource "aws_instance" "ec2" {
+  ami           = var.ami_id
+  instance_type = var.instance_type
+  tags = {
+    Name = var.name
+  }
+}
+
+output "instance_id" {
+  value = aws_instance.ec2.id
+}
+
+
+##################################################
+## Top-level variables.tf
+##################################################
+variable "instances" {
+  type = list(object({
+    name         = string
+    instance_type = string
+    ami_id        = string
+  }))
+  description = "List of instances with their configurations"
+}
+
+
+##################################################
+## Input example - terraform.tfvars
+##################################################
+instances = [
+  {
+    name         = "dev-instance-1"
+    instance_type = "t2.micro"
+    ami_id        = "ami-12345678"
+  },
+  {
+    name         = "prod-instance-1"
+    instance_type = "t2.medium"
+    ami_id        = "ami-87654321"
+  }
+]
+

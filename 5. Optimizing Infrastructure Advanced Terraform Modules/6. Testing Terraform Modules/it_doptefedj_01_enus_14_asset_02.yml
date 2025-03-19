@@ -1,0 +1,20 @@
+driver:
+  name: terraform
+
+platforms:
+  - name: aws
+    driver_config:
+      region: us-west-2
+      ami_id: ami-0c55b159cbfafe1f0
+      instance_type: t2.micro
+      instance_name: test-instance
+
+provisioner:
+  name: terraform
+
+verifier:
+  name: terraform
+  tests:
+    - test_name: "aws_instance"
+      expected_value: "running"
+
